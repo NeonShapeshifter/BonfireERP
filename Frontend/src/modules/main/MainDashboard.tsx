@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Users, DollarSign, FileText, Package } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Package, Users, DollarSign, FileText } from 'lucide-react';
-
 import Layout from '../../components/Layout';
 import Sidebar from '../../components/Sidebar';
 import Topbar from '../../components/Topbar';
@@ -30,15 +29,11 @@ const mockData = {
   },
   finanzas: {
     ingresosMes: 89500,
-    gastosMes: 52300,
-    utilidad: 37200,
-    cuentasPorCobrar: 15600
+    gastosMes: 52300
   },
   facturacion: {
-    facturasMes: 156,
-    montoTotal: 89500,
-    pendientes: 12,
-    vencidas: 3
+    facturasMes: 130,
+    ventasHoy: 45
   }
 };
 
@@ -49,7 +44,7 @@ const modules = [
   { id: 'facturacion', name: 'Facturación', icon: FileText, color: 'bg-orange-500' }
 ];
 
-const MainDashboard: React.FC = () => {
+const MainDashboard = () => {
   const [activeModule, setActiveModule] = useState('dashboard');
   const [selectedSucursal, setSelectedSucursal] = useState(mockUser.sucursales[0]);
   const [darkMode, setDarkMode] = useState(false);
@@ -94,23 +89,52 @@ const MainDashboard: React.FC = () => {
             <p>¿Qué quieres hacer hoy?</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard title="Productos" value={mockData.inventario.totalProductos} icon={Package} />
             <StatCard title="Empleados" value={mockData.empleados.totalEmpleados} icon={Users} />
             <StatCard title="Ingresos" value={`$${mockData.finanzas.ingresosMes.toLocaleString()}`} icon={DollarSign} />
             <StatCard title="Facturas" value={mockData.facturacion.facturasMes} icon={FileText} />
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {modules.filter(m => mockUser.permissions.includes(m.id)).map(module => (
+              <ModuleCard key={module.id} module={module} data={currentData(module.id)} />
+            ))}
+          </div>
         </>
       ) : (
         <motion.div layout>
-          <h2 className="text-2xl font-bold mb-4">
-            {modules.find(m => m.id === activeModule)?.name}
-          </h2>
+          <h2 className="text-2xl font-bold mb-4">{modules.find(m => m.id === activeModule)?.name}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Contenido detallado próximamente...</p>
         </motion.div>
       )}
     </Layout>
   );
 };
+
+
+interface ModuleCardProps {
+  module: { id: string; name: string; icon: React.ComponentType<{ className?: string }> };
+  data: Record<string, string | number>;
+}
+
+const ModuleCard: React.FC<ModuleCardProps> = ({ module, data }) => (
+  <motion.div whileHover={{ scale: 1.01 }} className="p-4 border rounded-lg bg-white dark:bg-slate-800 shadow cursor-pointer">
+    <div className="flex items-center mb-2">
+      <div className="p-2 rounded bg-orange-500">
+        <module.icon className="w-5 h-5 text-white" />
+      </div>
+      <h3 className="ml-3 text-lg font-bold">{module.name}</h3>
+    </div>
+    <div className="grid grid-cols-2 gap-2">
+      {Object.entries(data).map(([key, value]) => (
+        <div key={key}>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{key.replace(/([A-Z])/g, ' $1')}</p>
+          <p className="font-semibold">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+        </div>
+      ))}
+    </div>
+  </motion.div>
+);
 
 export default MainDashboard;
