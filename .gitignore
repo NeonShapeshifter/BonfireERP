@@ -1,0 +1,16 @@
+# Node
+node_modules/
+dist/
+.env
+
+# Vite
+.vite/
+*.log
+
+# Mac/Windows/Linux system files
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.idea/
+.vscode/
