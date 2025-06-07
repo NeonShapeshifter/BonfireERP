@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Users, UserCheck, CalendarX2, FileText } from 'lucide-react';
 import Table, { Column } from '../../components/Table';
 import StatCard from '../../components/StatCard';
+import Button from '../../components/Button';
+import PermissionEditor from './PermissionEditor';
 import { mockEmployees, Employee } from './mockEmployees';
 
 const tabs = [
@@ -13,11 +15,14 @@ const tabs = [
 const EmployeeDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
+  const [permEditorOpen, setPermEditorOpen] = useState(false);
+  const [editingPerms, setEditingPerms] = useState<string[]>([]);
 
-  const totalEmployees = mockEmployees.length;
-  const activeEmployees = mockEmployees.filter(e => e.active).length;
-  const totalAbsences = mockEmployees.reduce((sum, e) => sum + e.absences, 0);
-  const totalContracts = mockEmployees.filter(e => e.contractType).length;
+  const totalEmployees = employees.length;
+  const activeEmployees = employees.filter(e => e.active).length;
+  const totalAbsences = employees.reduce((sum, e) => sum + e.absences, 0);
+  const totalContracts = employees.filter(e => e.contractType).length;
 
   const columns: Column<Employee>[] = [
     { key: 'name', label: 'Nombre' },
@@ -39,7 +44,7 @@ const EmployeeDashboard = () => {
     },
   ];
 
-  const selected = mockEmployees.find(e => e.id === selectedId);
+  const selected = employees.find(e => e.id === selectedId);
 
   return (
     <div className="p-6 space-y-6">
@@ -72,7 +77,7 @@ const EmployeeDashboard = () => {
       )}
 
       {activeTab === 'empleados' && (
-        <Table columns={columns} data={mockEmployees} />
+        <Table columns={columns} data={employees} />
       )}
 
       {activeTab === 'calendario' && (
@@ -82,7 +87,7 @@ const EmployeeDashboard = () => {
       {selected && (
         <div className="fixed inset-0 bg-white z-20 flex">
           <div className="w-64 border-r overflow-y-auto">
-            {mockEmployees.map(emp => (
+            {employees.map(emp => (
               <button
                 key={emp.id}
                 onClick={() => setSelectedId(emp.id)}
@@ -113,10 +118,34 @@ const EmployeeDashboard = () => {
                 <p><strong>Etiquetas:</strong> {selected.tags.join(', ')}</p>
               )}
               <p><strong>Permisos:</strong> {selected.permissions.join(', ')}</p>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setEditingPerms(selected.permissions);
+                  setPermEditorOpen(true);
+                }}
+              >
+                Editar permisos
+              </Button>
             </div>
           </div>
         </div>
       )}
+      <PermissionEditor
+        open={permEditorOpen}
+        initial={editingPerms}
+        onSave={perms => {
+          if (selectedId !== null) {
+            setEmployees(emps =>
+              emps.map(emp =>
+                emp.id === selectedId ? { ...emp, permissions: perms } : emp
+              )
+            );
+          }
+          setPermEditorOpen(false);
+        }}
+        onClose={() => setPermEditorOpen(false)}
+      />
     </div>
   );
 };
