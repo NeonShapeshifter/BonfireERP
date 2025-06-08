@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Employee, mockEmployees } from '../mockEmployees';
-import PermissionEditor from './PermissionEditor';
+import { mockEmployees } from '../mockEmployees';import PermissionEditor from './PermissionEditor';
 
 const EmployeeTool = () => {
   const viewerRole = 'admin';
