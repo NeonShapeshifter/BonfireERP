@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Users, UserCheck, CalendarX2, FileText } from 'lucide-react';
-import Table, { Column } from '../../components/Table';
+import Table, { type Column } from '../../components/Table';
 import StatCard from '../../components/StatCard';
 import Button from '../../components/Button';
 import PermissionEditor from './PermissionEditor';
-import { mockEmployees, Employee } from './mockEmployees';
+import { mockEmployees, Employee } from '../mockEmployees';
 
 const tabs = [
   { id: 'dashboard', label: 'Dashboard' },

@@ -38,7 +38,7 @@ function Table<T>({ columns, data, page, pageSize, onPageChange }: TableProps<T>
               <tr key={i} className="hover:bg-gray-100 dark:hover:bg-slate-700">
                 {columns.map(col => (
                   <td key={String(col.key)} className="px-4 py-2">
-                    {col.render ? col.render(row) : (row[col.key] as unknown as React.ReactNode)}
+                    {col.render ? col.render(row) : (row[col.key] as React.ReactNode)}
                   </td>
                 ))}
               </tr>
@@ -46,6 +46,7 @@ function Table<T>({ columns, data, page, pageSize, onPageChange }: TableProps<T>
           </tbody>
         </table>
       </div>
+
       {page && pageSize && onPageChange && totalPages > 1 && (
         <div className="flex items-center justify-end gap-2">
           <button
