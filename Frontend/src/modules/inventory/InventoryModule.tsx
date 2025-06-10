@@ -1,11 +1,29 @@
++24
+-1
+
 import { useState } from 'react';
 import DashboardTab from './DashboardTab';
 import ProductListTab from './ProductListTab';
-import { BarChart3, LayoutList } from 'lucide-react';
+import ReturnManagement from './ReturnManagement';
+import ReportView from './ReportView';
+import AuditLog from './AuditLog';
+import WarehouseOptimizer from './WarehouseOptimizer';
+import {
+  BarChart3,
+  LayoutList,
+  RotateCcw,
+  FileText,
+  ListChecks,
+  Boxes,
+} from 'lucide-react';
 
 const tabs = [
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
   { id: 'products', label: 'Productos', icon: LayoutList },
+  { id: 'returns', label: 'Devoluciones', icon: RotateCcw },
+  { id: 'reports', label: 'Reportes', icon: FileText },
+  { id: 'audit', label: 'Bitácora', icon: ListChecks },
+  { id: 'optimizer', label: 'Optimizar', icon: Boxes },
 ];
 
 const InventoryModule = () => {
@@ -17,6 +35,14 @@ const InventoryModule = () => {
         return <DashboardTab />;
       case 'products':
         return <ProductListTab />;
+      case 'returns':
+        return <ReturnManagement />;
+      case 'reports':
+        return <ReportView />;
+      case 'audit':
+        return <AuditLog />;
+      case 'optimizer':
+        return <WarehouseOptimizer />;
       default:
         return null;
     }
