@@ -1,7 +1,7 @@
 import React from 'react';
 import { Users, UserCheck, CalendarX2, FileText } from 'lucide-react';
 import StatCard from '../../components/StatCard';
-import { mockEmployees } from '../mockEmployees';
+import { mockEmployees } from './mockEmployees';
 
 const DashboardTab: React.FC = () => {
   const totalEmployees = mockEmployees.length;

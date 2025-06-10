@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Employee } from '../mockEmployees';
+import type { Employee } from './mockEmployees';
 import { CalendarDays, AlertCircle } from 'lucide-react';
 
 interface Props {

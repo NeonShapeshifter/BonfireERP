@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import EmployeeModule from './modules/employee/EmployeeModule';
+import InventoryModule from './modules/inventory/InventoryModule'; // ✅ Nuevo módulo
 import Topbar from './components/Topbar';
 import Sidebar from './components/Sidebar';
-import { Users, CalendarDays, BarChart3 } from 'lucide-react';
 import Layout from './components/Layout';
-import { mockEmployees } from './modules/mockEmployees';
+import { Users, CalendarDays, Boxes } from 'lucide-react'; // ✅ Icono para inventario
+import { mockEmployees } from './modules/employee/mockEmployees';
 
 const modules = [
   { id: 'empleados', name: 'Empleados', icon: Users },
   { id: 'calendario', name: 'Calendario', icon: CalendarDays },
+  { id: 'inventario', name: 'Inventario', icon: Boxes }, // ✅ Agregado inventario
 ];
 
-const App: React.FC = () => {
+const App = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [activeModule, setActiveModule] = useState('empleados');
   const [sucursal, setSucursal] = useState('Sucursal 1');
@@ -24,7 +26,7 @@ const App: React.FC = () => {
           modules={modules}
           activeModule={activeModule}
           onSelect={setActiveModule}
-          permissions={['empleados', 'calendario']}
+          permissions={['empleados', 'calendario', 'inventario']} // ✅ Asegúrate de incluir el permiso
         />
       }
       topbar={
@@ -39,7 +41,8 @@ const App: React.FC = () => {
       }
     >
       {activeModule === 'empleados' && <EmployeeModule employees={mockEmployees} />}
-      {/* Aquí puedes agregar otros módulos en el futuro */}
+      {activeModule === 'inventario' && <InventoryModule />} {/* ✅ Módulo de inventario visible */}
+      {/* Puedes agregar más módulos aquí */}
     </Layout>
   );
 };

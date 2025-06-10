@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Employee } from '../mockEmployees';
+import type { Employee } from './mockEmployees';
 import Button from '../../components/Button';
 import PermissionEditor from './PermissionEditor';
 

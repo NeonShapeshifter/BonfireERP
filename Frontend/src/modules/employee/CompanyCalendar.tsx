@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import Drawer from './Drawer';
 import NewActivityModal, { CalendarEvent } from './NewActivityModal';
 import Button from '../../components/Button';
-import { mockEmployees } from '../mockEmployees';
+import { mockEmployees } from './mockEmployees';
 
 const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
