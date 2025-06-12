@@ -1,9 +1,20 @@
 import { useMemo, useState, useEffect } from 'react';
-import { mockProducts, type Product } from './mockInventory';
+import { mockProducts, type Product,} from './mockInventory';
 import MovementLog from './MovementLog';
+import ProductHistory from './ProductHistory';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Modal from '../../components/Modal';
+import { getLowStockProducts, getExpiringSoon, getNoRecentMovements,} from './inventoryUtils';
+
+// Define ActionLogEntry type since it's missing from mockInventory
+interface ActionLogEntry {
+  id: number;
+  date: string;
+  user: string;
+  action: string;
+  description: string;
+}
 
 // Define Movement type
 interface Movement {
@@ -14,8 +25,18 @@ interface Movement {
   note?: string;
 }
 
+// Extended Product type with missing properties
+interface ExtendedProduct extends Product {
+  history: ActionLogEntry[];
+  archived: boolean;
+  cost: number;
+  price: number;
+  expiryDate?: string;
+  batch?: string;
+}
+
 const ProductListTab = () => {
-  const [products, setProducts] = useState<Product[]>([...mockProducts]);
+  const [products, setProducts] = useState<ExtendedProduct[]>([...mockProducts as ExtendedProduct[]]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
@@ -48,12 +69,76 @@ const ProductListTab = () => {
     quantity: 0,
     note: '',
   });
+  const [showLowStock, setShowLowStock] = useState(false);
+  const [showExpiring, setShowExpiring] = useState(false);
+  const [showNoMove, setShowNoMove] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkStocks, setBulkStocks] = useState<Record<number, number>>({});
+
+  const addHistory = (
+    productId: number,
+    action: string,
+    description: string,
+    user = 'admin',
+  ) => {
+    const entry: ActionLogEntry = {
+      id: Date.now(),
+      date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+      user,
+      action,
+      description,
+    };
+    setProducts(prev =>
+      prev.map(p =>
+        p.id === productId ? { ...p, history: [...p.history, entry] } : p,
+      ),
+    );
+  };
+
+  const openBulk = () => {
+    const map: Record<number, number> = {};
+    products.forEach(p => {
+      map[p.id] = p.stock;
+    });
+    setBulkStocks(map);
+    setBulkOpen(true);
+  };
+
+  const saveBulk = () => {
+    setProducts(prev =>
+      prev.map(p =>
+        bulkStocks[p.id] !== undefined ? { ...p, stock: bulkStocks[p.id] } : p,
+      ),
+    );
+    Object.keys(bulkStocks).forEach(id =>
+      addHistory(Number(id), 'adjust', 'Ajuste masivo'),
+    );
+    setBulkOpen(false);
+  };
+
+  const handleCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target?.result as string;
+      text.split(/\r?\n/).forEach(line => {
+        const [sku, qty] = line.split(',');
+        if (!sku || !qty) return;
+        const prod = products.find(p => p.sku === sku.trim());
+        if (prod)
+          setBulkStocks(b => ({ ...b, [prod.id]: Number(qty) }));
+      });
+    };
+    reader.readAsText(file);
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('bonfire_products');
     if (saved) {
       try {
-        setProducts(JSON.parse(saved) as Product[]);
+        setProducts(JSON.parse(saved) as ExtendedProduct[]);
       } catch {
         // ignore malformed data
       }
@@ -69,7 +154,12 @@ const ProductListTab = () => {
     [products]
   );
 
-  const filtered = products.filter(
+  let temp = products;
+  if (!showArchived) temp = temp.filter(p => !p.archived);
+  if (showLowStock) temp = getLowStockProducts(temp);
+  if (showExpiring) temp = getExpiringSoon(temp);
+  if (showNoMove) temp = getNoRecentMovements(temp);
+  const filtered = temp.filter(
     p =>
       (p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase())) &&
@@ -101,18 +191,20 @@ const ProductListTab = () => {
     if (!form.price && form.price !== 0) errs.price = 'Requerido';
     if (!form.stock && form.stock !== 0) errs.stock = 'Requerido';
     if (!form.minStock && form.minStock !== 0) errs.minStock = 'Requerido';
-    if (products.some(p => p.sku === form.sku)) errs.sku = 'SKU ya existe';
+    if (products.some(p => p.sku === form.sku && !p.archived))
+      errs.sku = 'SKU ya existe';
     if (form.minStock > form.stock) errs.minStock = 'Debe ser <= stock';
     if (form.stock < 0) errs.stock = 'Debe ser >= 0';
     if (form.minStock < 0) errs.minStock = 'Debe ser >= 0';
     if (form.cost < 0) errs.cost = 'Debe ser >= 0';
     if (form.price < 0) errs.price = 'Debe ser >= 0';
+    if (form.price < form.cost) errs.price = 'Debe ser >= costo';
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
 
-    const newProduct: Product = {
+    const newProduct: ExtendedProduct = {
       id: Date.now(),
       sku: form.sku,
       name: form.name,
@@ -124,12 +216,15 @@ const ProductListTab = () => {
       maxStock: Number(form.stock),
       location: '',
       movements: [],
+      archived: false,
+      history: [],
       cost: Number(form.cost),
       price: Number(form.price),
       expiryDate: form.expiryDate || undefined,
     };
 
     setProducts(prev => [...prev, newProduct]);
+    addHistory(newProduct.id, 'create', 'Creación de producto');
     setIsOpen(false);
   };
 
@@ -156,7 +251,9 @@ const ProductListTab = () => {
     if (!selected) return;
     const errs: Record<string, string> = {};
     if (!editForm.sku) errs.sku = 'Requerido';
-    if (products.some(p => p.sku === editForm.sku && p.id !== selected.id))
+    if (
+      products.some(p => p.sku === editForm.sku && p.id !== selected.id && !p.archived)
+    )
       errs.sku = 'SKU ya existe';
     if (editForm.stock < 0) errs.stock = 'Debe ser >= 0';
     if (editForm.minStock < 0) errs.minStock = 'Debe ser >= 0';
@@ -165,7 +262,7 @@ const ProductListTab = () => {
       setEditErrors(errs);
       return;
     }
-    const updated: Product = {
+    const updated: ExtendedProduct = {
       ...selected,
       sku: editForm.sku,
       category: editForm.category,
@@ -176,6 +273,7 @@ const ProductListTab = () => {
       expiryDate: editForm.expiryDate || undefined,
     };
     setProducts(prev => prev.map(p => (p.id === selected.id ? updated : p)));
+    addHistory(selected.id, 'update', 'Edición de producto');
     setEditing(false);
   };
 
@@ -183,8 +281,20 @@ const ProductListTab = () => {
     if (!selected) return;
     if (window.confirm('¿Eliminar producto?')) {
       setProducts(prev => prev.filter(p => p.id !== selected.id));
+      addHistory(selected.id, 'delete', 'Eliminación de producto');
       setSelectedId(null);
     }
+  };
+
+  const toggleArchive = () => {
+    if (!selected) return;
+    const updated: ExtendedProduct = { ...selected, archived: !selected.archived };
+    setProducts(prev => prev.map(p => (p.id === selected.id ? updated : p)));
+    addHistory(
+      selected.id,
+      'archive',
+      updated.archived ? 'Archivado' : 'Reactivado',
+    );
   };
 
   const saveMovement = () => {
@@ -202,12 +312,17 @@ const ProductListTab = () => {
     if (moveForm.type === 'entry') newStock += moveForm.quantity;
     else if (moveForm.type === 'exit') newStock -= moveForm.quantity;
     else newStock = moveForm.quantity;
-    const updated: Product = {
+    if (newStock < 0) {
+      window.alert('Stock negativo no permitido');
+      return;
+    }
+    const updated: ExtendedProduct = {
       ...selected,
       stock: newStock,
       movements: [...selected.movements, movement],
     };
     setProducts(prev => prev.map(p => (p.id === selected.id ? updated : p)));
+    addHistory(selected.id, 'movement', `${movement.type} ${movement.quantity}`);
     setMoveOpen(false);
     setMoveForm({ type: 'entry', quantity: 0, note: '' });
   };
@@ -235,99 +350,94 @@ const ProductListTab = () => {
                     <button
                       key={prod.id}
                       onClick={() => setSelectedId(prod.id)}
-                      className={`block w-full text-left px-2 py-1 rounded hover:bg-orange-100 ${
-                        selectedId === prod.id ? 'bg-orange-100' : ''
+                      className={`w-full text-left p-2 rounded hover:bg-gray-100 ${
+                        prod.id === selectedId ? 'bg-blue-100' : ''
                       }`}
                     >
-                      {prod.name}
+                      <div className="font-medium">{prod.name}</div>
+                      <div className="text-sm text-gray-600">{prod.sku}</div>
                     </button>
                   ))}
                 </div>
               </aside>
-              <div className="w-3/4 space-y-2">
+              <div className="flex-1">
                 {editing ? (
                   <>
-                    <Input
-                      label="SKU"
-                      value={editForm.sku}
-                      onChange={e =>
-                        setEditForm(f => ({ ...f, sku: e.target.value }))
-                      }
-                      error={editErrors.sku}
-                    />
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Categoría</label>
-                      <select
-                        className="w-full px-3 py-2 border rounded"
-                        value={editForm.category}
-                        onChange={e =>
-                          setEditForm(f => ({ ...f, category: e.target.value }))
-                        }
-                      >
-                        {categories.map(c => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <Input
-                      label="Stock"
-                      type="number"
-                      value={editForm.stock}
-                      onChange={e =>
-                        setEditForm(f => ({ ...f, stock: Number(e.target.value) }))
-                      }
-                      error={editErrors.stock}
-                    />
-                    <Input
-                      label="Mínimo"
-                      type="number"
-                      value={editForm.minStock}
-                      onChange={e =>
-                        setEditForm(f => ({
-                          ...f,
-                          minStock: Number(e.target.value),
-                        }))
-                      }
-                      error={editErrors.minStock}
-                    />
-                    <Input
-                      label="Ubicación"
-                      value={editForm.location}
-                      onChange={e =>
-                        setEditForm(f => ({ ...f, location: e.target.value }))
-                      }
-                    />
-                    <Input
-                      label="Lote"
-                      value={editForm.batch}
-                      onChange={e =>
-                        setEditForm(f => ({ ...f, batch: e.target.value }))
-                      }
-                    />
-                    <Input
-                      label="Expira"
-                      type="date"
-                      value={editForm.expiryDate}
-                      onChange={e =>
-                        setEditForm(f => ({ ...f, expiryDate: e.target.value }))
-                      }
-                    />
-                    <div className="flex gap-2">
-                      <Button onClick={saveEdit}>Guardar</Button>
-                      <Button variant="secondary" onClick={cancelEdit}>
-                        Cancelar
-                      </Button>
+                    <div className="space-y-4">
+                      <Input
+                        label="SKU"
+                        value={editForm.sku}
+                        onChange={e => setEditForm(f => ({ ...f, sku: e.target.value }))}
+                        error={editErrors.sku}
+                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Categoría
+                        </label>
+                        <select
+                          value={editForm.category}
+                          onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        >
+                          {categories.map(c => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <Input
+                        label="Stock"
+                        type="number"
+                        value={editForm.stock}
+                        onChange={e => setEditForm(f => ({ ...f, stock: Number(e.target.value) }))}
+                        error={editErrors.stock}
+                      />
+                      <Input
+                        label="Stock mínimo"
+                        type="number"
+                        value={editForm.minStock}
+                        onChange={e => setEditForm(f => ({ ...f, minStock: Number(e.target.value) }))}
+                        error={editErrors.minStock}
+                      />
+                      <Input
+                        label="Ubicación"
+                        value={editForm.location}
+                        onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))}
+                      />
+                      <Input
+                        label="Lote"
+                        value={editForm.batch}
+                        onChange={e => setEditForm(f => ({ ...f, batch: e.target.value }))}
+                      />
+                      <Input
+                        label="Fecha de expiración"
+                        type="date"
+                        value={editForm.expiryDate}
+                        onChange={e => setEditForm(f => ({ ...f, expiryDate: e.target.value }))}
+                      />
+                      <div className="flex gap-2">
+                        <Button onClick={saveEdit}>Guardar</Button>
+                        <Button variant="secondary" onClick={cancelEdit}>
+                          Cancelar
+                        </Button>
+                      </div>
                     </div>
                   </>
                 ) : (
                   <>
+                    <h3 className="text-xl font-semibold mb-4">{selected.name}</h3>
                     <p>
                       <strong>SKU:</strong> {selected.sku}
                     </p>
                     <p>
+                      <strong>Descripción:</strong> {selected.description}
+                    </p>
+                    <p>
                       <strong>Categoría:</strong> {selected.category}
+                    </p>
+                    <p>
+                      <strong>Marca:</strong> {selected.brand}
                     </p>
                     <p>
                       <strong>Stock:</strong> {selected.stock}
@@ -358,6 +468,12 @@ const ProductListTab = () => {
                       </Button>
                       <Button
                         variant="secondary"
+                        onClick={toggleArchive}
+                      >
+                        {selected.archived ? 'Activar producto' : 'Archivar producto'}
+                      </Button>
+                      <Button
+                        variant="secondary"
                         onClick={() => setMoveOpen(true)}
                       >
                         Registrar movimiento
@@ -368,6 +484,10 @@ const ProductListTab = () => {
                 <div className="border-t pt-2 space-y-2">
                   <h4 className="font-semibold">Movimientos</h4>
                   <MovementLog entries={selected.movements} />
+                </div>
+                <div className="border-t pt-2 space-y-2">
+                  <h4 className="font-semibold">Historial</h4>
+                  <ProductHistory entries={selected.history} />
                 </div>
               </div>
             </div>
@@ -395,7 +515,40 @@ const ProductListTab = () => {
                   </option>
                 ))}
               </select>
+              <label className="text-sm flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={showLowStock}
+                  onChange={e => setShowLowStock(e.target.checked)}
+                />
+                Stock bajo
+              </label>
+              <label className="text-sm flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={showExpiring}
+                  onChange={e => setShowExpiring(e.target.checked)}
+                />
+                Próximos a expirar
+              </label>
+              <label className="text-sm flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={showNoMove}
+                  onChange={e => setShowNoMove(e.target.checked)}
+                />
+                Sin movimiento
+              </label>
+              <label className="text-sm flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={e => setShowArchived(e.target.checked)}
+                />
+                Ver archivados
+              </label>
               <Button onClick={openModal}>Agregar producto</Button>
+              <Button variant="secondary" onClick={openBulk}>Ajuste rápido</Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map(product => (
@@ -431,12 +584,14 @@ const ProductListTab = () => {
                   onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
                   error={errors.sku}
                 />
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Categoría</label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Categoría
+                  </label>
                   <select
-                    className="w-full px-3 py-2 border rounded"
                     value={form.category}
                     onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
                     {categories.map(c => (
                       <option key={c} value={c}>
@@ -448,6 +603,7 @@ const ProductListTab = () => {
                 <Input
                   label="Costo"
                   type="number"
+                  step="0.01"
                   value={form.cost}
                   onChange={e => setForm(f => ({ ...f, cost: Number(e.target.value) }))}
                   error={errors.cost}
@@ -455,26 +611,27 @@ const ProductListTab = () => {
                 <Input
                   label="Precio"
                   type="number"
+                  step="0.01"
                   value={form.price}
                   onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))}
                   error={errors.price}
                 />
                 <Input
-                  label="Stock"
+                  label="Stock inicial"
                   type="number"
                   value={form.stock}
                   onChange={e => setForm(f => ({ ...f, stock: Number(e.target.value) }))}
                   error={errors.stock}
                 />
                 <Input
-                  label="Mínimo"
+                  label="Stock mínimo"
                   type="number"
                   value={form.minStock}
                   onChange={e => setForm(f => ({ ...f, minStock: Number(e.target.value) }))}
                   error={errors.minStock}
                 />
                 <Input
-                  label="Expira"
+                  label="Fecha de expiración"
                   type="date"
                   value={form.expiryDate}
                   onChange={e => setForm(f => ({ ...f, expiryDate: e.target.value }))}
@@ -489,17 +646,16 @@ const ProductListTab = () => {
               actions={<Button onClick={saveMovement}>Guardar</Button>}
             >
               <div className="space-y-2">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium" htmlFor="type">
-                    Tipo de movimiento
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo
                   </label>
                   <select
-                    id="type"
-                    className="w-full px-3 py-2 border rounded"
                     value={moveForm.type}
                     onChange={e =>
                       setMoveForm(f => ({ ...f, type: e.target.value }))
                     }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
                     <option value="entry">entrada</option>
                     <option value="exit">salida</option>
@@ -521,6 +677,33 @@ const ProductListTab = () => {
                     setMoveForm(f => ({ ...f, note: e.target.value }))
                   }
                 />
+              </div>
+            </Modal>
+
+            <Modal
+              isOpen={bulkOpen}
+              onClose={() => setBulkOpen(false)}
+              title="Ajuste rápido"
+              actions={<Button onClick={saveBulk}>Guardar</Button>}
+            >
+              <div className="space-y-2">
+                <input type="file" accept=".csv" onChange={handleCsv} />
+                {products.map(p => (
+                  <div key={p.id} className="flex items-center gap-2">
+                    <span className="w-32 text-sm">{p.name}</span>
+                    <input
+                      type="number"
+                      value={bulkStocks[p.id] ?? p.stock}
+                      onChange={e =>
+                        setBulkStocks(b => ({
+                          ...b,
+                          [p.id]: Number(e.target.value),
+                        }))
+                      }
+                      className="px-2 py-1 border rounded w-24"
+                    />
+                  </div>
+                ))}
               </div>
             </Modal>
           </>
