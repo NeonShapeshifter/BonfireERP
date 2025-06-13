@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import EmployeeModule from './modules/employee/EmployeeModule';
 import InventoryModule from './modules/inventory/InventoryModule'; // ✅ Nuevo módulo
+import FinanceModule from './modules/finance/FinanceModule';
 import Topbar from './components/Topbar';
 import Sidebar from './components/Sidebar';
 import Layout from './components/Layout';
-import { Users, CalendarDays, Boxes } from 'lucide-react'; // ✅ Icono para inventario
+import { Users, CalendarDays, Boxes, DollarSign } from 'lucide-react'; // ✅ Icono para inventario
 import { mockEmployees } from './modules/employee/mockEmployees';
 
 const modules = [
   { id: 'empleados', name: 'Empleados', icon: Users },
   { id: 'calendario', name: 'Calendario', icon: CalendarDays },
   { id: 'inventario', name: 'Inventario', icon: Boxes }, // ✅ Agregado inventario
+  { id: 'finanzas', name: 'Finanzas', icon: DollarSign },
 ];
 
 const App = () => {
@@ -26,7 +28,7 @@ const App = () => {
           modules={modules}
           activeModule={activeModule}
           onSelect={setActiveModule}
-          permissions={['empleados', 'calendario', 'inventario']} // ✅ Asegúrate de incluir el permiso
+          permissions={['empleados', 'calendario', 'inventario', 'finanzas']} // ✅ Asegúrate de incluir el permiso
         />
       }
       topbar={
@@ -42,6 +44,7 @@ const App = () => {
     >
       {activeModule === 'empleados' && <EmployeeModule employees={mockEmployees} />}
       {activeModule === 'inventario' && <InventoryModule />} {/* ✅ Módulo de inventario visible */}
+      {activeModule === 'finanzas' && <FinanceModule />}
       {/* Puedes agregar más módulos aquí */}
     </Layout>
   );
