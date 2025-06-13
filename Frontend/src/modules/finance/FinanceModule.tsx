@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BarChart2, List, UploadCloud, FileText, Wallet } from 'lucide-react';
-import Dashboard from './Dashboard';
+import DashboardTab from './DashboardTab';
 import Transactions from './Transactions';
 import BankReconciliation from './BankReconciliation';
 import Reports from './Reports';
@@ -20,7 +20,7 @@ const FinanceModule = () => {
   const renderTab = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />;
+        return <DashboardTab />;
       case 'transacciones':
         return <Transactions />;
       case 'conciliacion':

@@ -24,40 +24,42 @@ const BankReconciliation = () => {
   };
 
   const columns: Column<MatchRow>[] = [
-    {
-      key: 'local',
-      label: 'Local',
-      render: row => (
+  {
+    key: 'local',
+    label: 'Local',
+    render: row => (
+      <div className="space-y-1">
+        <p>{row.local?.date} - {row.local?.categoria}</p>
+        <p className="text-sm text-gray-500">${row.local?.monto}</p>
+      </div>
+    ),
+  },
+  {
+    key: 'bank',
+    label: 'Banco',
+    render: row => (
+      row.bank ? (
         <div className="space-y-1">
-          <p>{row.local?.date} - {row.local?.categoria}</p>
-          <p className="text-sm text-gray-500">${row.local?.monto}</p>
+          <p>{row.bank.date} - {row.bank.descripcion}</p>
+          <p className="text-sm text-gray-500">${row.bank.monto}</p>
         </div>
-      ),
-    },
-    {
-      key: 'bank',
-      label: 'Banco',
-      render: row => (
-        row.bank ? (
-          <div className="space-y-1">
-            <p>{row.bank.date} - {row.bank.descripcion}</p>
-            <p className="text-sm text-gray-500">${row.bank.monto}</p>
-          </div>
-        ) : <span className="text-xs text-gray-500">Pendiente</span>
-      ),
-    },
-    {
-      key: 'conciliado',
-      label: 'Estado',
-      render: (row, i) => (
-        row.conciliado ? (
-          <span className="text-green-500">✅ Conciliado</span>
-        ) : (
-          <Button variant="secondary" onClick={() => manualMatch(i)}>Marcar</Button>
-        )
-      ),
-    },
-  ];
+      ) : <span className="text-xs text-gray-500">Pendiente</span>
+    ),
+  },
+  {
+    key: 'conciliado',
+    label: 'Estado',
+    render: (row) => {
+      const index = matches.findIndex(m => m.local?.id === row.local?.id);
+      return row.conciliado ? (
+        <span className="text-green-500">✅ Conciliado</span>
+      ) : (
+        <Button variant="secondary" onClick={() => manualMatch(index)}>Marcar</Button>
+      );
+    }
+  }
+];
+
 
   return (
     <div className="space-y-4">
