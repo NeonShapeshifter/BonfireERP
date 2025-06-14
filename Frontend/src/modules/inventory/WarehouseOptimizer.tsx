@@ -9,11 +9,16 @@ const WarehouseOptimizer = () => {
   return (
     <div className="space-y-2">
       <h2 className="text-xl font-bold">Sugerencias de ubicación</h2>
-      <ul className="list-disc ml-6">
+      <div className="flex flex-wrap gap-2">
         {suggestions.map(s => (
-          <li key={s.name}>{s.name} → {s.zone}</li>
+          <span
+            key={s.name}
+            className="px-3 py-1 rounded-md bg-light dark:bg-slate-700 shadow-md text-sm"
+          >
+            {s.name} → {s.zone}
+          </span>
         ))}
-      </ul>
+      </div>
     </div>
   );
 };

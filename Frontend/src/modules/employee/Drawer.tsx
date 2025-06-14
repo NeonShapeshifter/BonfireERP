@@ -17,11 +17,11 @@ const Drawer: React.FC<DrawerProps> = ({ open, onClose, children }) => (
         exit={{ opacity: 0 }}
       >
         <div
-          className="absolute inset-0 bg-black/50"
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
           onClick={onClose}
         />
         <motion.div
-          className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-lg p-4 max-h-[80%] overflow-y-auto"
+          className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-800 rounded-t-md p-4 max-h-[80%] overflow-y-auto"
           initial={{ y: '100%' }}
           animate={{ y: 0 }}
           exit={{ y: '100%' }}

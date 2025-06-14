@@ -1,6 +1,17 @@
 import { ArrowDown, ArrowUp, LineChart, PieChart } from 'lucide-react';
 import StatCard from '../../components/StatCard';
 import { mockTransactions } from './mockFinance';
+import {
+  ResponsiveContainer,
+  LineChart as RLineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  BarChart as RBarChart,
+  Bar,
+} from 'recharts';
 
 const DashboardTab = () => {
   const ingresos = mockTransactions
@@ -23,6 +34,8 @@ const DashboardTab = () => {
 
   // datos mock para tendencia de ventas
   const trend = [400, 500, 600, 550, 650, 700];
+  const trendData = trend.map((v, i) => ({ mes: `M${i + 1}`, valor: v }));
+  const catData = gastosPorCategoria.map(g => ({ name: g.categoria, monto: g.monto }));
 
   return (
     <div className="space-y-4">
@@ -40,36 +53,27 @@ const DashboardTab = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-neutral-900 rounded shadow p-4">
           <h4 className="font-semibold mb-2">Tendencia de ventas 6 meses</h4>
-          <svg viewBox="0 0 120 60" className="w-full h-40">
-            <polyline
-              fill="none"
-              stroke="#f97316"
-              strokeWidth="2"
-              points={trend
-                .map((v, i) => `${(i / (trend.length - 1)) * 120},${60 - v / 15}`)
-                .join(' ')}
-            />
-          </svg>
+          <ResponsiveContainer width="100%" height={160}>
+            <RLineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="mes" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="valor" stroke="#FF4F00" />
+            </RLineChart>
+          </ResponsiveContainer>
         </div>
         <div className="bg-white dark:bg-neutral-900 rounded shadow p-4">
           <h4 className="font-semibold mb-2">Gastos por categoría</h4>
-          <svg viewBox="0 0 120 60" className="w-full h-40">
-            {gastosPorCategoria.map((g, i) => (
-              <rect
-                key={g.categoria}
-                x={(i * 25) + 10}
-                y={60 - (g.monto / gastos) * 50}
-                width="20"
-                height={(g.monto / gastos) * 50}
-                fill="#f97316"
-              />
-            ))}
-          </svg>
-          <div className="flex justify-between text-xs mt-1">
-            {gastosPorCategoria.map(g => (
-              <span key={g.categoria}>{g.categoria}</span>
-            ))}
-          </div>
+          <ResponsiveContainer width="100%" height={160}>
+            <RBarChart data={catData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="monto" fill="#FF4F00" />
+            </RBarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

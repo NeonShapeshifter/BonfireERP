@@ -1,3 +1,6 @@
++2
+-2
+
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,7 +22,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, title, children, actions, onClose
         exit={{ opacity: 0 }}
       >
         <motion.div
-          className="absolute inset-0 bg-black/50"
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
           onClick={onClose}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -33,7 +36,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, title, children, actions, onClose
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold">{title}</h3>
-            <button onClick={onClose} aria-label="Cerrar" className="text-gray-500 hover:text-orange-500">×</button>
+            <button onClick={onClose} aria-label="Cerrar" className="text-gray-500 hover:text-accent">×</button>
           </div>
           <div className="mb-4">{children}</div>
           {actions && <div className="flex justify-end gap-2">{actions}</div>}

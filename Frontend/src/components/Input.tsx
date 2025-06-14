@@ -7,13 +7,13 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Input: React.FC<InputProps> = ({ label, error, className, ...props }) => (
-  <div className="space-y-1">
+  <div className="space-y-1 text-sm">
     <label className="text-sm font-medium" htmlFor={props.id}>{label}</label>
     <input
       {...props}
       id={props.id}
       className={clsx(
-        'w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50',
+        'w-full px-3 py-2 border rounded-md bg-white dark:bg-neutral-900 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 text-sm',
         error && 'border-red-500',
         className,
       )}
